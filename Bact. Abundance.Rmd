@@ -1,0 +1,162 @@
+---
+title: "Bacterial Abundance"
+author: "Jake Salamida"
+date: "10/29/2020"
+output: html_document
+---
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(readxl)
+install.packages("lubridate")
+library(lubridate)
+library(tidyr)
+```
+
+```{r}
+excel_sheets("~/144l_students/Input_Data/week3/144L_2018_BactAbund.xlsx")
+Metadata <- read_excel("~/144l_students/Input_Data/week3/144L_2018_BactAbund.xlsx", sheet = "Metadata")
+head(Metadata)
+
+Data <- read_excel("~/144l_students/Input_Data/week3/144L_2018_BactAbund.xlsx", sheet = "Data")
+head(Data)
+
+joined <- left_join(Metadata, Data)
+summary(joined)
+View(joined)
+
+```
+
+```{r}
+
+cells <- joined %>%
+  mutate(Datetime = ymd_hm(Datetime),
+         cells = Cells_ml * 1000) %>%
+  mutate(interv = interval(first(Datetime),Datetime),
+         hours = interv/ 3600,
+         days = hours/24) %>%
+  drop_na(cells)
+
+
+```
+
+```{r}
+custom.colors <- c("Control" = "#377EBB", "Ash Leachate" = "#4DAF4A", "Glucose_Nitrate_Phosphate" = "#E41A1C", "Mud_Leachate" = "#FFCC00")
+levels <- c("Control", "Ash Leachate", "Glucose_Nitrate_Phosphate", "Mud_Leachate")
+
+cells %>%
+  mutate(dna = ifelse(DNA_Sample == T, "*", NA)) %>%
+  ggplot(aes(x = days, y = cells, group = interaction(Treatment, Bottle)))+
+  geom_line(aes(color = factor(Treatment, levels = levels)), size = 1) +
+  geom_point(aes(fill = factor(Treatment, levels = levels)), size = 3, color = "black", shape = 21) +
+    geom_text(aes(label = dna), size = 12, color = "#E41A1C") 
+    labs(x = "Days", y = expression(paste("Cells, L*^-1")), fill = "") + 
+    guides( color = F) +
+    scale_color_manual(values = custom.colors) + 
+    scale_fill_manual(values = custom.colors) +
+      facet_grid(Bottle, scales = "free") +
+    theme_bw()
+  
+```
+
+```{r}
+ln_cells <- cells %>%
+  group_by(Experiment, Treatment, Bottle) %>%
+  mutate(ln_cells = log(cells),
+         diff_ln_cells = ln_cells - lag(ln_cells, default = first(ln_cells)))
+
+ln_cells %>%
+  mutate(dna = ifelse(DNA_Sample == T, "*", NA)) %>%
+  ggplot(aes(x = days, y = diff_ln_cells, group = interaction(Experiment, Treatment, Bottle)))+
+  geom_line(aes(color = factor(Treatment, levels = levels)), size = 1) +
+  geom_point(aes(fill = factor(Treatment, levels = levels)), size = 3, color = "black", shape = 21) +
+    geom_text(aes(label = dna), size = 12, color = "#E41A1C") 
+    labs(x = "Days", y = "Delta_ln_cells") +
+       guides( color = F) +
+    scale_color_manual(values = custom.colors) + 
+    scale_fill_manual(values = custom.colors) +
+      facet_grid(Treatment, scale = "free") +
+    theme_bw()
+  
+
+
+```
+
+###Exponential growth by Treatment
+##Treatment
+#control
+- Days 0-2
+#Ash Leachate
+- Days 0-1
+#Glucose_Nitrate_Phosphate
+-Days 0-2
+#Mud Leachate
+- 0-2
+
+
+
+
+
+```{r}
+growth <- ln_cells %>%
+  mutate(exp_start = ifelse(Treatment == "Control" & Bottle == "A", 0, NA),
+         exp_start = ifelse(Treatment == "Control" & Bottle == "B", 0, exp_start),
+         exp_start = ifelse(Treatment == "Ash_Leachate" & Bottle == "C", 0,exp_start),
+         exp_start = ifelse(Treatment == "Ash_Leachate" & Bottle == "D", 0, exp_start),
+         exp_start = ifelse(Treatment == "Mud_Leachate" & Bottle == "E", 0, exp_start),
+         exp_start = ifelse(Treatment == "Mud_Leachate" & Bottle == "F", 0, exp_start),
+         exp_start = ifelse(Treatment == "Glucose_Nitrate_Phosphate" & Bottle == "G", 0, exp_start),
+         exp_start = ifelse(Treatment == "Glucose_Nitrate_Phosphate" & Bottle == "H", 0, exp_start),)
+select(Treatment, Bottle, ln_cells)
+
+head(growth)
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
